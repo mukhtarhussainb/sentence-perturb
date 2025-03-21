@@ -1,14 +1,9 @@
 import logging
 import os
-import random
-import datetime
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
-import numpy as np
 import pandas as pd
-import torch
 from datasets import load_dataset
-from torch.utils.data import DataLoader
 import tqdm
 from sentence_perturb_create_ds import WordReplacer 
 
@@ -25,16 +20,10 @@ languages = {
     "zh": {"name": "chinese", "verb": "动词 (dòngcí)", "adj": "形容词 (xíngróngcí)"},
 }
 
-def run_pipeline(dataset_name: str, lang: str) -> None:
+def run_pipeline(dataset_name: str, lang: str, batch_size=32) -> None:
   
-    # # Set seeds for reproducibility
-    # np.random.seed(42)
-    # random.seed(42)
-    # torch.manual_seed(42)
-    
-    # device = "cuda" if torch.cuda.is_available() else "cpu"
-    # logger.info(f"Using device: {device}")
-    GPT_Word_Replacer = WordReplacer(language=languages[lang])
+   
+    GPT_Word_Replacer = WordReplacer(language=languages[lang], llm_model="gpt-4o")
     # Load the dataset
     logger.info(f"Loading dataset '{dataset_name}' for language '{lang}'")
     dataset = load_dataset(dataset_name, lang)
@@ -43,16 +32,14 @@ def run_pipeline(dataset_name: str, lang: str) -> None:
     train_dataset = dataset["train"]
     logger.info(f"Training split extracted with {len(train_dataset)} samples")
     
-    # Get the text column (adjust according to your dataset structure)
-    columns_to_keep = ["id", "sentence1", "label"]
+    columns_to_keep = ["id", "sentence1"]
     # Create a list of dictionaries, each containing only the selected columns
     selected_data = []
     for i in range(len(train_dataset)):
         sample = {col: train_dataset[i][col] for col in columns_to_keep}
         selected_data.append(sample)
     # Create batches
-
-    batch_size = 32  
+    logger.info(f"Creating batches of size {batch_size} from the dataset")
     batches = [selected_data[i:i+batch_size] for i in range(0, len(selected_data), batch_size)]
     logger.info(f"Created {len(batches)} batches of size {batch_size}")
     
@@ -75,24 +62,23 @@ def run_pipeline(dataset_name: str, lang: str) -> None:
                 "sentence1": batch[j]["sentence1"],
                  "perturbed_synonyms": batch_responses_synonyms[j],
                 "perturbed_antonyms": batch_responses_antonyms[j],
-                "label": batch[j]["label"],
+                # "label": batch[j]["label"],
             }
             processed_items.append(processed_item)
         
         all_responses.extend(processed_items)
         break # for debug
         
-        # Optional: Save responses periodically to avoid losing progress
+        # Save responses periodically to avoid losing progress
         # if (i+1) % 10 == 0:
         #     logger.info(f"Saving responses after batch {i+1}")
-        #     # Add your saving logic here (e.g., to a file or database)
+        #     # Add saving logic here (e.g., to a file or database)
     
     logger.info(f"Processing complete. Processed {len(all_responses)} samples.")
     # Save all responses to a file
     output_file = f"{dataset_name}_perturbed_{lang}.csv"
     save_results(all_responses, output_file)
     
-    # Here you can add code to save or further process the responses
     
     return all_responses
 
