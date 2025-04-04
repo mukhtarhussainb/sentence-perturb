@@ -59,7 +59,7 @@ def run_pipeline(dataset_name: str, lang: str, batch_size=32) -> None:
         for j in range(len(batch)):
             processed_item = {
                 "id": batch[j]["id"],
-                "sentence1": batch[j]["sentence1"],
+                "sentence": batch[j]["sentence1"],
                  "perturbed_synonyms": batch_responses_synonyms[j],
                 "perturbed_antonyms": batch_responses_antonyms[j],
                 # "label": batch[j]["label"],
